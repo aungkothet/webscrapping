@@ -2,53 +2,52 @@ import fs from 'fs'
 import path from 'path'
 import csvjson from 'csvjson'
 
-const inputFolder =
-  '/Users/kothet/FormaticX/webscrapping/jsons/2024-10-20--09-12' // Replace with the actual path to your folder
-const outputFile = 'onekeymls-outout-2024-10-20.json'
-const outputCSVFile = 'onekeymls-outout-2024-10-20.csv'
-const results = []
+// var fileName = 'compass/2024-10-28/jefferson'
+var fileName = process.argv[2]
+var folderName = 'output/jsons/' + fileName
+var results = []
+let i = 0
 
-var i = 0
-// fs.readdir(inputFolder, (err, files) => {
-//   if (err) throw err
+fs.readdir(folderName, (err, files) => {
+  if (err) throw err
 
-//   files.forEach((file) => {
-//     if (path.extname(file) === '.json') {
-//       const filePath = path.join(inputFolder, file)
+  files.forEach((file) => {
+    if (path.extname(file) === '.json') {
+      const filePath = path.join(folderName, file)
 
-//       fs.readFile(filePath, 'utf8', (err, data) => {
-//         if (err) throw err
-//         const jsonData = JSON.parse(data)
+      fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) throw err
+        const jsonData = JSON.parse(data)
 
-//         jsonData.forEach((data) => {
-//           results.push(data)
-//         })
-//         i++
-//         if (files.length === i) {
-//           // Write the merged data to a single JSON file
-//           fs.writeFile(outputFile, JSON.stringify(results, null, 2), (err) => {
-//             if (err) throw err
-//             console.log('Merged data written to ' + outputFile)
-//           })
-//         }
-//       })
-//     }
-//   })
-// })
-
-fs.readFile(outputFile, 'utf-8', (err, fileContent) => {
-  if (err) {
-    console.error(err)
-    return
-  }
-  const csvData = csvjson.toCSV(fileContent, {
-    headers: 'key',
-  })
-  fs.writeFile(outputCSVFile, csvData, 'utf-8', (err) => {
-    if (err) {
-      console.error(err)
-      return
+        jsonData.forEach((data) => {
+          results.push(data)
+        })
+        i++
+        if (files.length === i) {
+          try {
+            if (!fs.existsSync('output/export')) {
+              fs.mkdirSync('output/export', { recursive: true }, (err) => {})
+            }
+          } catch (err) {
+            console.error(err)
+          }
+          const csvData = csvjson.toCSV(results, {
+            headers: 'key',
+          })
+          fs.writeFile(
+            'output/export/' + fileName.replaceAll('/', '-') + '.csv',
+            csvData,
+            'utf-8',
+            (err) => {
+              if (err) {
+                console.error(err)
+                return
+              }
+              console.log('Conversion successful. CSV file created.')
+            }
+          )
+        }
+      })
     }
-    console.log('Conversion successful. CSV file created.')
   })
 })

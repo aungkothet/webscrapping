@@ -13,7 +13,7 @@ export function replaceLastPart(string, replacement) {
 }
 
 export function writeToFile(name, folderName, obj) {
-  jsonDirectory = path.join(path.resolve(), 'jsons/' + folderName)
+  jsonDirectory = path.join(path.resolve(), 'output/jsons/' + folderName)
   try {
     if (!fs.existsSync(jsonDirectory)) {
       fs.mkdirSync(jsonDirectory, { recursive: true }, (err) => {})
@@ -36,7 +36,7 @@ export function writeToFile(name, folderName, obj) {
 }
 
 export function writeToCSV(name, folderName) {
-  csvDirectory = path.join(path.resolve(), 'csvs/' + folderName)
+  csvDirectory = path.join(path.resolve(), 'output/csvs/' + folderName)
   try {
     if (!fs.existsSync(csvDirectory)) {
       fs.mkdirSync(csvDirectory, { recursive: true }, (err) => {})

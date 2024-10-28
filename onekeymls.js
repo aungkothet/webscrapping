@@ -10,14 +10,15 @@ var page
 var obj = []
 var link
 
-var folderName = new Date()
-  .toISOString()
-  .slice(0, 16)
-  .replaceAll(':', '-')
-  .replaceAll('T', '--')
+var folderName =
+  'onekeymls/' +
+  new Date()
+    .toISOString()
+    .slice(0, 10)
+    .replaceAll(':', '-')
+    .replaceAll('T', '--')
 
 const init = async () => {
-  console.log('Folder Name:' + folderName)
   browser = await puppeteer.launch({
     headless: false,
     defaultViewport: null,
@@ -54,6 +55,7 @@ const init = async () => {
     obj = []
     await browser.close()
   }
+  console.log('Folder Name:' + folderName)
 }
 
 const getData = async (targetUrl) => {
