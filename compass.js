@@ -483,7 +483,7 @@ const detail = async (targetUrl, pObj, index = 0) => {
 
 const counties = ['jefferson', 'dutchess', 'oswego', 'oneida', 'ulster']
 
-const scrap = (county, index) => {
+const scrap = async (county, index) => {
   if (index != 0) {
     folderName = replaceLastPart(folderName, county)
   } else {
@@ -491,7 +491,14 @@ const scrap = (county, index) => {
   }
   rootUrl = `https://www.compass.com/for-rent/${county}-county-ny/status=coming-soon,active,rented/rented-date.max=1years/`
   targetUrl = rootUrl
-  init()
+  await init()
 }
-counties.forEach(scrap)
+
+async function processCounties(array) {
+  for (const item of array) {
+    await scrap(item)
+  }
+}
+
+processCounties(counties)
 // scrap('dutchess', 0)
