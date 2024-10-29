@@ -501,4 +501,4 @@ async function processCounties(array) {
   }
 }
 
-// processCounties(counties)
+processCounties(counties)
