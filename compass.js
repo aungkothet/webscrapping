@@ -1,12 +1,12 @@
 import puppeteer from 'puppeteer'
-import { replaceLastPart, writeToFile } from './helper.js'
+import { generateExport, replaceLastPart, writeToFile } from './helper.js'
 var rootUrl
 var county
 var targetUrl
 var browser
 var page
 var obj = []
-var mheadless = Boolean(process.argv[2])
+var mheadless = Boolean(!process.argv[2])
 
 var folderName =
   'compass/' +
@@ -56,6 +56,7 @@ const init = async () => {
     await browser.close()
   }
   console.log('Folder Name:' + folderName)
+  generateExport(folderName)
 }
 
 const getDataPerPaginationPage = async (targetUrl) => {
@@ -495,10 +496,9 @@ const scrap = async (county, index) => {
 }
 
 async function processCounties(array) {
-  for (const item of array) {
-    await scrap(item)
+  for (const [index, item] of array.entries()) {
+    await scrap(item, index)
   }
 }
 
-processCounties(counties)
-// scrap('dutchess', 0)
+// processCounties(counties)

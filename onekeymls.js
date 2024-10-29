@@ -1,5 +1,5 @@
 import puppeteer from 'puppeteer'
-import { replaceLastPart, writeToFile } from './helper.js'
+import { generateExport, replaceLastPart, writeToFile } from './helper.js'
 
 const baseUrl = 'https://www.onekeymls.com'
 const rootUrl = 'https://www.onekeymls.com/homes/for-rent'
@@ -9,6 +9,7 @@ var browser
 var page
 var obj = []
 var link
+var mheadless = Boolean(!process.argv[2])
 
 var folderName =
   'onekeymls/' +
@@ -20,7 +21,7 @@ var folderName =
 
 const init = async () => {
   browser = await puppeteer.launch({
-    headless: false,
+    headless: mheadless,
     defaultViewport: null,
     userDataDir: './tmp',
   })
@@ -46,7 +47,7 @@ const init = async () => {
   await browser.close()
   for (var i = 1; i <= length; i++) {
     browser = await puppeteer.launch({
-      headless: false,
+      headless: mheadless,
       defaultViewport: null,
       userDataDir: './tmp',
     })
@@ -56,6 +57,7 @@ const init = async () => {
     await browser.close()
   }
   console.log('Folder Name:' + folderName)
+  generateExport(folderName)
 }
 
 const getData = async (targetUrl) => {
