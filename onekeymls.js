@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer'
 import {
+  closeJsonFile,
   generateExport,
   replaceLastPart,
   writeToFile,
@@ -12,7 +13,6 @@ const rootUrl = 'https://www.onekeymls.com/homes/for-rent'
 var targetUrl = rootUrl
 var browser
 var page
-var obj = []
 var link
 var mheadless = Boolean(!process.argv[2])
 
@@ -31,6 +31,7 @@ console.log = function (message) {
 }
 
 const init = async () => {
+  writeToFile(folderName, null, true)
   console.log(`Scrapping Start : ${new Date().toISOString()}`)
   browser = await puppeteer.launch({
     headless: mheadless,
@@ -65,9 +66,9 @@ const init = async () => {
     })
     targetUrl = baseUrl + replaceLastPart(link, i)
     await getData(targetUrl, i)
-    obj = []
     await browser.close()
   }
+  closeJsonFile(folderName)
   console.log('Folder Name:' + folderName)
   generateExport(folderName)
   console.log(`Scrapping End : ${new Date().toISOString()}`)
@@ -139,13 +140,8 @@ const getData = async (targetUrl, page = 0) => {
       'Square Feet': sqf,
       'Rental Price': price,
     }
-    await detail(url, detailObj, i, page)
+    await detail(url, detailObj, i + 1, page)
   }
-  writeToFile(
-    targetUrl.replaceAll('/', '_').replaceAll('.', '_').replaceAll(':', '_'),
-    folderName,
-    obj
-  )
   console.log('Complete Scrapping Page: ' + targetUrl)
   await paginationPage.close()
 }
@@ -278,9 +274,8 @@ const detail = async (targetUrl, pObj, index = 1, page = 1) => {
   pObj["32'' doors"] = null
   pObj['Flat entry'] = null
   pObj['Ramped entry'] = null
-
-  obj.push(pObj)
   await detailPage.close()
+  writeToFile(folderName, pObj)
 }
 
 init()

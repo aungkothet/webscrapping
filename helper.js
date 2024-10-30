@@ -1,6 +1,5 @@
 import fs from 'fs'
 import csvjson from 'csvjson'
-import path from 'path'
 
 export function replaceLastPart(string, replacement) {
   const parts = string.split('/')
@@ -9,8 +8,21 @@ export function replaceLastPart(string, replacement) {
   return newString
 }
 
-export function writeToFile(name, folderName, obj) {
-  var jsonDirectory = path.join(path.resolve(), 'output/jsons/' + folderName)
+export function closeJsonFile(folderName) {
+  const fileName = folderName.replaceAll('/', '-')
+  var jsonFileName = `output/jsons/${folderName}/${fileName}.json`
+  let fileContent = fs.readFileSync(jsonFileName, 'utf-8')
+  if (fileContent.endsWith(',\n')) {
+    fileContent = fileContent.slice(0, -2)
+    fs.writeFileSync(jsonFileName, fileContent + '\n]')
+  }
+}
+
+export function writeToFile(folderName, obj = null, start = false) {
+  const fileName = folderName.replaceAll('/', '-')
+  var jsonFileName = `output/jsons/${folderName}/${fileName}.json`
+  const jsonDirectory = `output/jsons/${folderName}`
+  var message
   try {
     if (!fs.existsSync(jsonDirectory)) {
       fs.mkdirSync(jsonDirectory, { recursive: true }, (err) => {})
@@ -18,86 +30,40 @@ export function writeToFile(name, folderName, obj) {
   } catch (err) {
     console.error(err)
   }
-
-  var json = JSON.stringify(obj)
-  fs.writeFile(
-    jsonDirectory + '/' + name + '.json',
-    json,
-    'utf8',
-    function (err) {
-      if (err) throw err
-      console.log('writing to csv file')
-      writeToCSV(name, folderName)
-    }
-  )
+  if (obj) {
+    message = JSON.stringify(obj) + ','
+  }
+  if (start) {
+    message = '['
+  }
+  const jsonFile = fs.createWriteStream(jsonFileName, { flags: 'a' })
+  jsonFile.write(message + '\n', 'utf8')
 }
 
-export function writeToCSV(name, folderName) {
-  var csvDirectory = path.join(path.resolve(), 'output/csvs/' + folderName)
-  var jsonDirectory = path.join(path.resolve(), 'output/jsons/' + folderName)
+export function generateExport(folderName) {
+  const fileName = folderName.replaceAll('/', '-')
+  const exportDir = 'output/export'
+  var jsonFileName = `output/jsons/${folderName}/${fileName}.json`
+  const csvFileName = `${exportDir}/${fileName}.csv`
   try {
-    if (!fs.existsSync(csvDirectory)) {
-      fs.mkdirSync(csvDirectory, { recursive: true }, (err) => {})
+    if (!fs.existsSync(exportDir)) {
+      fs.mkdirSync(exportDir, { recursive: true }, (err) => {})
     }
   } catch (err) {
     console.error(err)
   }
-  fs.readFile(`${jsonDirectory}/${name}.json`, 'utf-8', (err, fileContent) => {
+  fs.readFile(jsonFileName, 'utf-8', (err, fileContent) => {
     if (err) {
       console.error(err)
       return
     }
     const csvData = csvjson.toCSV(fileContent, { headers: 'key' })
-    fs.writeFile(`${csvDirectory}/${name}.csv`, csvData, 'utf-8', (err) => {
+    fs.writeFile(csvFileName, csvData, 'utf-8', (err) => {
       if (err) {
         console.error(err)
         return
       }
-      console.log('Conversion successful. CSV file created.')
-    })
-  })
-}
-
-export function generateExport(fileName) {
-  var folderName = `output/jsons/${fileName}`
-  const csvFileName = `output/export/${fileName.replaceAll('/', '-')}.csv`
-  var results = []
-  let i = 0
-
-  fs.readdir(folderName, (err, files) => {
-    if (err) throw err
-
-    files.forEach((file) => {
-      if (path.extname(file) === '.json') {
-        const filePath = path.join(folderName, file)
-        fs.readFile(filePath, 'utf8', (err, data) => {
-          if (err) throw err
-          const jsonData = JSON.parse(data)
-          jsonData.forEach((data) => {
-            results.push(data)
-          })
-          i++
-          if (files.length === i) {
-            try {
-              if (!fs.existsSync('output/export')) {
-                fs.mkdirSync('output/export', { recursive: true }, (err) => {})
-              }
-            } catch (err) {
-              console.error(err)
-            }
-            const csvData = csvjson.toCSV(results, {
-              headers: 'key',
-            })
-            fs.writeFile(csvFileName, csvData, 'utf-8', (err) => {
-              if (err) {
-                console.error(err)
-                return
-              }
-              console.log(`Final CSV file created at : ${csvFileName}`)
-            })
-          }
-        })
-      }
+      console.log(`Final CSV file created at : ${csvFileName}`)
     })
   })
 }

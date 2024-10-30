@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer'
 import {
+  closeJsonFile,
   generateExport,
   replaceLastPart,
   writeToFile,
@@ -10,7 +11,6 @@ var county
 var targetUrl
 var browser
 var page
-var obj = []
 var mheadless = Boolean(!process.argv[2])
 
 var folderName =
@@ -28,6 +28,7 @@ console.log = function (message) {
 }
 
 const init = async () => {
+  writeToFile(folderName, null, true)
   let length = 1
   browser = await puppeteer.launch({
     headless: mheadless,
@@ -63,9 +64,9 @@ const init = async () => {
       targetUrl = rootUrl + 'start=' + (i - 1) * 41 + '/'
     }
     await getDataPerPaginationPage(targetUrl, i)
-    obj = []
     await browser.close()
   }
+  closeJsonFile(folderName)
   console.log('Folder Name:' + folderName)
   generateExport(folderName)
 }
@@ -101,14 +102,9 @@ const getDataPerPaginationPage = async (targetUrl, page) => {
         Street: addressData.address.streetAddress,
         'Zip Code': addressData.address.postalCode,
       }
-      await detail(addressData.url, detailObj, i, page)
+      await detail(addressData.url, detailObj, i + 1, page)
     }
   }
-  writeToFile(
-    targetUrl.replaceAll('/', '_').replaceAll('.', '_').replaceAll(':', '_'),
-    folderName,
-    obj
-  )
   console.log('Complete Scrapping Page: ' + targetUrl)
   await paginationPage.close()
 }
@@ -489,8 +485,8 @@ const detail = async (targetUrl, pObj, index = 0, page = 1) => {
   pObj['Interior features'] = interorFeatures
   pObj['Fees Include'] = null
   pObj['Gated Community'] = null
-  obj.push(pObj)
   await detailPage.close()
+  writeToFile(folderName, pObj)
 }
 
 const counties = ['jefferson', 'dutchess', 'oswego', 'oneida', 'ulster']
