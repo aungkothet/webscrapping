@@ -1,5 +1,10 @@
 import puppeteer from 'puppeteer'
-import { generateExport, replaceLastPart, writeToFile } from './helper.js'
+import {
+  generateExport,
+  replaceLastPart,
+  writeToFile,
+  writeToLog,
+} from './helper.js'
 
 const baseUrl = 'https://www.onekeymls.com'
 const rootUrl = 'https://www.onekeymls.com/homes/for-rent'
@@ -19,7 +24,14 @@ var folderName =
     .replaceAll(':', '-')
     .replaceAll('T', '--')
 
+const originalConsoleLog = console.log
+console.log = function (message) {
+  originalConsoleLog(message)
+  writeToLog(folderName, message)
+}
+
 const init = async () => {
+  console.log(`Scrapping Start : ${new Date().toISOString()}`)
   browser = await puppeteer.launch({
     headless: mheadless,
     defaultViewport: null,
@@ -42,7 +54,7 @@ const init = async () => {
     console.log(e)
   }
   let length = Number(link.split('/').pop())
-  console.log('Total Pagination Page : ', length)
+  console.log(`Total Pagination Page : ${length}`)
 
   await browser.close()
   for (var i = 1; i <= length; i++) {
@@ -52,24 +64,26 @@ const init = async () => {
       userDataDir: './tmp',
     })
     targetUrl = baseUrl + replaceLastPart(link, i)
-    await getData(targetUrl)
+    await getData(targetUrl, i)
     obj = []
     await browser.close()
   }
   console.log('Folder Name:' + folderName)
   generateExport(folderName)
+  console.log(`Scrapping End : ${new Date().toISOString()}`)
+  console.log('-------')
 }
 
-const getData = async (targetUrl) => {
+const getData = async (targetUrl, page = 0) => {
   var paginationPage = await browser.newPage()
   await paginationPage.goto(targetUrl, {
     waitUntil: 'networkidle0',
     timeout: 0,
   })
   const propertySearchCards = await paginationPage.$$('.property-search-card')
-  console.log('Scrapping Page: ', targetUrl)
-  console.log('Total Property in this page: ', propertySearchCards.length)
-  for (const propertyCard of propertySearchCards) {
+  console.log('Scrapping Page: ' + targetUrl)
+  console.log('Total Property in this page: ' + propertySearchCards.length)
+  for (const [i, propertyCard] of propertySearchCards.entries()) {
     try {
       let link = await paginationPage.evaluate(
         (el) => el.querySelector('a').getAttribute('href'),
@@ -80,7 +94,8 @@ const getData = async (targetUrl) => {
 
     try {
       var price = await paginationPage.evaluate(
-        (el) => el.querySelector('div.font-semibold.text-black-soft').innerText,
+        (el) =>
+          el.querySelector('div.font-semibold.text-black-soft').textContent,
         propertyCard
       )
       price = price.replaceAll(',', '')
@@ -91,7 +106,7 @@ const getData = async (targetUrl) => {
         const roomsTags = Array.from(
           el.querySelectorAll('div.flex.items-baseline > span.font-semibold')
         )
-        return roomsTags.map((room) => room.innerText)
+        return roomsTags.map((room) => room.textContent)
       }, propertyCard)
 
       let [lbed, lsqf, lacres] = rooms
@@ -102,7 +117,7 @@ const getData = async (targetUrl) => {
         (el) =>
           el.querySelector(
             'div.flex.items-baseline > span > span.font-semibold'
-          ).innerText,
+          ).textContent,
         propertyCard
       )
     } catch (e) {}
@@ -112,7 +127,7 @@ const getData = async (targetUrl) => {
         (el) =>
           el.querySelector(
             'div.flex.gap-x-5 > div.leading-tight.text-sm.font-medium'
-          ).innerText,
+          ).textContent,
         propertyCard
       )
     } catch (e) {}
@@ -124,7 +139,7 @@ const getData = async (targetUrl) => {
       'Square Feet': sqf,
       'Rental Price': price,
     }
-    await detail(url, detailObj)
+    await detail(url, detailObj, i, page)
   }
   writeToFile(
     targetUrl.replaceAll('/', '_').replaceAll('.', '_').replaceAll(':', '_'),
@@ -135,8 +150,8 @@ const getData = async (targetUrl) => {
   await paginationPage.close()
 }
 
-const detail = async (targetUrl, pObj) => {
-  console.log('scrapping .... ' + targetUrl)
+const detail = async (targetUrl, pObj, index = 1, page = 1) => {
+  console.log(`scrapping ${page} >> ${index}.... ${targetUrl}`)
   var localObj = {}
   var detailPage = await browser.newPage()
   await detailPage.goto(targetUrl, {
@@ -149,7 +164,7 @@ const detail = async (targetUrl, pObj) => {
   )
   let addressAry = []
   for (const ahref of addressDiv) {
-    let aValue = await detailPage.evaluate((el) => el.innerText, ahref)
+    let aValue = await detailPage.evaluate((el) => el.textContent, ahref)
     addressAry.push(aValue)
   }
   var state = addressAry[0]
@@ -164,11 +179,11 @@ const detail = async (targetUrl, pObj) => {
   for (const property of propertyDivs) {
     try {
       let key = await detailPage.evaluate(
-        (el) => el.querySelector('div.text-sm.self-center').innerText,
+        (el) => el.querySelector('div.text-sm.self-center').textContent,
         property
       )
       let value = await detailPage.evaluate(
-        (el) => el.lastChild.innerText,
+        (el) => el.lastChild.textContent,
         property
       )
 

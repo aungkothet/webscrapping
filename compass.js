@@ -1,5 +1,10 @@
 import puppeteer from 'puppeteer'
-import { generateExport, replaceLastPart, writeToFile } from './helper.js'
+import {
+  generateExport,
+  replaceLastPart,
+  writeToFile,
+  writeToLog,
+} from './helper.js'
 var rootUrl
 var county
 var targetUrl
@@ -15,6 +20,12 @@ var folderName =
     .slice(0, 10)
     .replaceAll(':', '-')
     .replaceAll('T', '--')
+
+const originalConsoleLog = console.log
+console.log = function (message) {
+  originalConsoleLog(message)
+  writeToLog(folderName, message)
+}
 
 const init = async () => {
   let length = 1
@@ -34,7 +45,7 @@ const init = async () => {
   )
   try {
     length = await page.evaluate(
-      (el) => el.innerText,
+      (el) => el.textContent,
       paginationLinks[paginationLinks.length - 1]
     )
   } catch (e) {
@@ -51,7 +62,7 @@ const init = async () => {
     if (i != 1) {
       targetUrl = rootUrl + 'start=' + (i - 1) * 41 + '/'
     }
-    await getDataPerPaginationPage(targetUrl)
+    await getDataPerPaginationPage(targetUrl, i)
     obj = []
     await browser.close()
   }
@@ -59,7 +70,8 @@ const init = async () => {
   generateExport(folderName)
 }
 
-const getDataPerPaginationPage = async (targetUrl) => {
+const getDataPerPaginationPage = async (targetUrl, page) => {
+  console.log('Scrapping Page: ' + targetUrl)
   var addressData
   var paginationPage = await browser.newPage()
   await paginationPage.goto(targetUrl, {
@@ -67,10 +79,9 @@ const getDataPerPaginationPage = async (targetUrl) => {
     timeout: 0,
   })
   const propertyCards = await paginationPage.$$('div.uc-listingPhotoCard')
-  console.log('Scrapping Page: ', targetUrl)
-  console.log('Total Property in this page: ', propertyCards.length)
-  let i = 1
-  for (const propertyCard of propertyCards) {
+  console.log('Total Property in this page: ' + propertyCards.length)
+
+  for (const [i, propertyCard] of propertyCards.entries()) {
     let isProperty = await paginationPage.evaluate(
       (el) => !!el.querySelector('div.uc-listingPhotoCard-body'),
       propertyCard
@@ -80,7 +91,7 @@ const getDataPerPaginationPage = async (targetUrl) => {
         const scriptTags = Array.from(
           el.querySelectorAll('script[type="application/ld+json"]')
         )
-        return JSON.parse(scriptTags[0].innerText)
+        return JSON.parse(scriptTags[0].textContent)
       }, propertyCard)
       let detailObj = {
         Url: addressData.url,
@@ -90,7 +101,7 @@ const getDataPerPaginationPage = async (targetUrl) => {
         Street: addressData.address.streetAddress,
         'Zip Code': addressData.address.postalCode,
       }
-      await detail(addressData.url, detailObj, i++)
+      await detail(addressData.url, detailObj, i, page)
     }
   }
   writeToFile(
@@ -102,8 +113,8 @@ const getDataPerPaginationPage = async (targetUrl) => {
   await paginationPage.close()
 }
 
-const detail = async (targetUrl, pObj, index = 0) => {
-  console.log(`scrapping ${index}.... ${targetUrl}`)
+const detail = async (targetUrl, pObj, index = 0, page = 1) => {
+  console.log(`scrapping ${page} >> ${index}.... ${targetUrl}`)
   var localObj = {}
   var detailPage = await browser.newPage()
   await detailPage.goto(targetUrl, {
@@ -115,7 +126,7 @@ const detail = async (targetUrl, pObj, index = 0) => {
     const priceTag = document.querySelector(
       'div.summary-price-space > div > div>div.textIntent-title2'
     )
-    return priceTag.innerText
+    return priceTag.textContent
   })
   pObj['Rental Price'] = price.replaceAll(',', '')
 
@@ -127,9 +138,9 @@ const detail = async (targetUrl, pObj, index = 0) => {
       'div[data-tn="listing-page-summary-bed"]>div>div.textIntent-title2'
     )
     if (bedsTag) {
-      return bedsTag.innerText
+      return bedsTag.textContent
     } else if (bedTag) {
-      return bedTag.innerText
+      return bedTag.textContent
     } else {
       return '-'
     }
@@ -144,9 +155,9 @@ const detail = async (targetUrl, pObj, index = 0) => {
       'div[data-tn="listing-page-summary-bath"]>div>div.textIntent-title2'
     )
     if (bathsTag) {
-      return bathsTag.innerText
+      return bathsTag.textContent
     } else if (bathTag) {
-      return bathTag.innerText
+      return bathTag.textContent
     } else {
       return '-'
     }
@@ -157,7 +168,7 @@ const detail = async (targetUrl, pObj, index = 0) => {
     const sqftTag = document.querySelector(
       'div[data-tn="listing-page-summary-sq-ft"]>div>div.textIntent-title2'
     )
-    return sqftTag.innerText
+    return sqftTag.textContent
   })
   pObj['Square Feet'] = sqft.replaceAll(',', '').replaceAll('Sq. Ft.', '')
 
@@ -165,11 +176,11 @@ const detail = async (targetUrl, pObj, index = 0) => {
   for (const property of listingDetails) {
     try {
       let key = await detailPage.evaluate(
-        (el) => el.querySelector('th').innerText,
+        (el) => el.querySelector('th').textContent,
         property
       )
       let value = await detailPage.evaluate(
-        (el) => el.querySelector('td').innerText,
+        (el) => el.querySelector('td').textContent,
         property
       )
 
@@ -192,7 +203,7 @@ const detail = async (targetUrl, pObj, index = 0) => {
   if (viewMoreBtn) {
     await detailPage
       .locator('button[data-tn="listing-page-building-info-view-more"]')
-      .filter((button) => button.innerText === 'View More')
+      .filter((button) => button.textContent === 'View More')
       .click()
   }
   const buildingInfoDivs = await detailPage.$$(
@@ -202,11 +213,11 @@ const detail = async (targetUrl, pObj, index = 0) => {
   for (const property of buildingInfoDivs) {
     try {
       let key = await detailPage.evaluate(
-        (el) => el.querySelector('span').innerText,
+        (el) => el.querySelector('span').textContent,
         property
       )
       let value = await detailPage.evaluate(
-        (el) => el.querySelector('strong').innerText,
+        (el) => el.querySelector('strong').textContent,
         property
       )
 
@@ -230,19 +241,19 @@ const detail = async (targetUrl, pObj, index = 0) => {
       (el) =>
         el.querySelector(
           'div[data-tn="uc-listing-propertyInformationCategory-title"]'
-        ).innerText,
+        ).textContent,
       propertyInfoCategoryDiv
     )
     if (title.toLowerCase() == 'interior and exterior features') {
       interiors = await detailPage.evaluate((el) => {
         const liTags = Array.from(el.querySelectorAll('li'))
-        return liTags.map((tag) => tag.innerText)
+        return liTags.map((tag) => tag.textContent)
       }, propertyInfoCategoryDiv)
     }
     if (title.toLowerCase() == 'rental') {
       rentalIncludes = await detailPage.evaluate((el) => {
         const liTags = Array.from(el.querySelectorAll('li'))
-        return liTags.map((tag) => tag.innerText)
+        return liTags.map((tag) => tag.textContent)
       }, propertyInfoCategoryDiv)
     }
   }
@@ -320,7 +331,6 @@ const detail = async (targetUrl, pObj, index = 0) => {
     }
   })
 
-  pObj['Heat - Included with Rent'] = heatIncl
   pObj['High Speed Internet - Included with Rent'] = hsInternetIncl
   pObj['Electric - Included with Rent'] = elecrticIncl
   pObj['Gas - Included with Rent'] = gasIncl
@@ -445,6 +455,7 @@ const detail = async (targetUrl, pObj, index = 0) => {
     }
   })
 
+  pObj['Heat - Included with Rent'] = heatIncl ?? heating ? 'Yes' : 'No'
   pObj['Heater'] = heating
   pObj['Refrigerator'] = refrigeratorIncl
   pObj['Washer'] = washerIncl
@@ -492,7 +503,10 @@ const scrap = async (county, index) => {
   }
   rootUrl = `https://www.compass.com/for-rent/${county}-county-ny/status=coming-soon,active,rented/rented-date.max=1years/`
   targetUrl = rootUrl
+  console.log(`Scrapping Start : ${county} : ${new Date().toISOString()}`)
   await init()
+  console.log(`Scrapping End : ${county} : ${new Date().toISOString()}`)
+  console.log('-------')
 }
 
 async function processCounties(array) {
@@ -500,5 +514,4 @@ async function processCounties(array) {
     await scrap(item, index)
   }
 }
-
 processCounties(counties)

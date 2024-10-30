@@ -2,9 +2,6 @@ import fs from 'fs'
 import csvjson from 'csvjson'
 import path from 'path'
 
-var jsonDirectory
-var csvDirectory
-
 export function replaceLastPart(string, replacement) {
   const parts = string.split('/')
   parts[parts.length - 1] = replacement
@@ -13,7 +10,7 @@ export function replaceLastPart(string, replacement) {
 }
 
 export function writeToFile(name, folderName, obj) {
-  jsonDirectory = path.join(path.resolve(), 'output/jsons/' + folderName)
+  var jsonDirectory = path.join(path.resolve(), 'output/jsons/' + folderName)
   try {
     if (!fs.existsSync(jsonDirectory)) {
       fs.mkdirSync(jsonDirectory, { recursive: true }, (err) => {})
@@ -36,7 +33,8 @@ export function writeToFile(name, folderName, obj) {
 }
 
 export function writeToCSV(name, folderName) {
-  csvDirectory = path.join(path.resolve(), 'output/csvs/' + folderName)
+  var csvDirectory = path.join(path.resolve(), 'output/csvs/' + folderName)
+  var jsonDirectory = path.join(path.resolve(), 'output/jsons/' + folderName)
   try {
     if (!fs.existsSync(csvDirectory)) {
       fs.mkdirSync(csvDirectory, { recursive: true }, (err) => {})
@@ -44,35 +42,25 @@ export function writeToCSV(name, folderName) {
   } catch (err) {
     console.error(err)
   }
-  fs.readFile(
-    jsonDirectory + '/' + name + '.json',
-    'utf-8',
-    (err, fileContent) => {
+  fs.readFile(`${jsonDirectory}/${name}.json`, 'utf-8', (err, fileContent) => {
+    if (err) {
+      console.error(err)
+      return
+    }
+    const csvData = csvjson.toCSV(fileContent, { headers: 'key' })
+    fs.writeFile(`${csvDirectory}/${name}.csv`, csvData, 'utf-8', (err) => {
       if (err) {
         console.error(err)
         return
       }
-      const csvData = csvjson.toCSV(fileContent, {
-        headers: 'key',
-      })
-      fs.writeFile(
-        csvDirectory + '/' + name + '.csv',
-        csvData,
-        'utf-8',
-        (err) => {
-          if (err) {
-            console.error(err)
-            return
-          }
-          console.log('Conversion successful. CSV file created.')
-        }
-      )
-    }
-  )
+      console.log('Conversion successful. CSV file created.')
+    })
+  })
 }
 
 export function generateExport(fileName) {
-  var folderName = 'output/jsons/' + fileName
+  var folderName = `output/jsons/${fileName}`
+  const csvFileName = `output/export/${fileName.replaceAll('/', '-')}.csv`
   var results = []
   let i = 0
 
@@ -82,11 +70,9 @@ export function generateExport(fileName) {
     files.forEach((file) => {
       if (path.extname(file) === '.json') {
         const filePath = path.join(folderName, file)
-
         fs.readFile(filePath, 'utf8', (err, data) => {
           if (err) throw err
           const jsonData = JSON.parse(data)
-
           jsonData.forEach((data) => {
             results.push(data)
           })
@@ -102,26 +88,30 @@ export function generateExport(fileName) {
             const csvData = csvjson.toCSV(results, {
               headers: 'key',
             })
-            fs.writeFile(
-              'output/export/' + fileName.replaceAll('/', '-') + '.csv',
-              csvData,
-              'utf-8',
-              (err) => {
-                if (err) {
-                  console.error(err)
-                  return
-                }
-                console.log(
-                  `Final CSV file created at : output/export/${fileName.replaceAll(
-                    '/',
-                    '-'
-                  )}.csv`
-                )
+            fs.writeFile(csvFileName, csvData, 'utf-8', (err) => {
+              if (err) {
+                console.error(err)
+                return
               }
-            )
+              console.log(`Final CSV file created at : ${csvFileName}`)
+            })
           }
         })
       }
     })
   })
+}
+
+export function writeToLog(fileName, message) {
+  const logDir = `output/logs/${fileName}`
+  try {
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true }, (err) => {})
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  const logFileName = `${logDir}/${fileName.replaceAll('/', '-')}.log`
+  const logFile = fs.createWriteStream(logFileName, { flags: 'a' })
+  logFile.write(message + '\n')
 }
