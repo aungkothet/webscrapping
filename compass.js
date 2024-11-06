@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer'
 import {
+  checkAlreadyScrapped,
   closeJsonFile,
   generateExport,
   replaceLastPart,
@@ -12,9 +13,10 @@ var targetUrl
 var browser
 var page
 var mheadless = Boolean(!process.argv[2])
-
+const site = 'compass'
 var folderName =
-  'compass/' +
+  site +
+  '/' +
   new Date()
     .toISOString()
     .slice(0, 10)
@@ -94,15 +96,21 @@ const getDataPerPaginationPage = async (targetUrl, page) => {
         )
         return JSON.parse(scriptTags[0].textContent)
       }, propertyCard)
-      let detailObj = {
-        Url: addressData.url,
-        State: addressData.address.addressRegion,
-        County: county,
-        City: addressData.address.addressLocality,
-        Street: addressData.address.streetAddress,
-        'Zip Code': addressData.address.postalCode,
+
+      const parts = addressData.url.split('/')
+      const id = parts[parts.length - 1]
+      var alreadyScrapped = checkAlreadyScrapped(id, site)
+      if (!alreadyScrapped) {
+        let detailObj = {
+          Url: addressData.url,
+          State: addressData.address.addressRegion,
+          County: county,
+          City: addressData.address.addressLocality,
+          Street: addressData.address.streetAddress,
+          'Zip Code': addressData.address.postalCode,
+        }
+        await detail(addressData.url, detailObj, i + 1, page)
       }
-      await detail(addressData.url, detailObj, i + 1, page)
     }
   }
   console.log('Complete Scrapping Page: ' + targetUrl)

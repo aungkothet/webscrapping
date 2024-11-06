@@ -18,6 +18,18 @@ export function closeJsonFile(folderName) {
   }
 }
 
+export function checkAlreadyScrapped(id, site) {
+  let fileContent = fs.readFileSync(`finished/${site}-ids.json`, 'utf-8')
+  let ary = JSON.parse(fileContent)
+  if (ary.includes(id)) {
+    return true
+  } else {
+    ary.push(id)
+    fs.writeFileSync(`finished/${site}-ids.json`, JSON.stringify(ary))
+    return false
+  }
+}
+
 export function writeToFile(folderName, obj = null, start = false) {
   const fileName = folderName.replaceAll('/', '-')
   var jsonFileName = `output/jsons/${folderName}/${fileName}.json`

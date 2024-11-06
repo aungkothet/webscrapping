@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer'
 import {
+  checkAlreadyScrapped,
   closeJsonFile,
   generateExport,
   replaceLastPart,
@@ -92,55 +93,59 @@ const getData = async (targetUrl, page = 0) => {
       )
       var url = baseUrl + link
     } catch (e) {}
-
-    try {
-      var price = await paginationPage.evaluate(
-        (el) =>
-          el.querySelector('div.font-semibold.text-black-soft').textContent,
-        propertyCard
-      )
-      price = price.replaceAll(',', '')
-    } catch (e) {}
-
-    try {
-      let rooms = await paginationPage.evaluate((el) => {
-        const roomsTags = Array.from(
-          el.querySelectorAll('div.flex.items-baseline > span.font-semibold')
+    const parts = url.split('/')
+    const id = parts[parts.length - 1]
+    var alreadyScrapped = checkAlreadyScrapped(id, 'onekeymls')
+    if (!alreadyScrapped) {
+      try {
+        var price = await paginationPage.evaluate(
+          (el) =>
+            el.querySelector('div.font-semibold.text-black-soft').textContent,
+          propertyCard
         )
-        return roomsTags.map((room) => room.textContent)
-      }, propertyCard)
+        price = price.replaceAll(',', '')
+      } catch (e) {}
 
-      let [lbed, lsqf, lacres] = rooms
-      var bed = lbed
-      var sqf = lsqf.replaceAll(',', '')
+      try {
+        let rooms = await paginationPage.evaluate((el) => {
+          const roomsTags = Array.from(
+            el.querySelectorAll('div.flex.items-baseline > span.font-semibold')
+          )
+          return roomsTags.map((room) => room.textContent)
+        }, propertyCard)
 
-      var bath = await paginationPage.evaluate(
-        (el) =>
-          el.querySelector(
-            'div.flex.items-baseline > span > span.font-semibold'
-          ).textContent,
-        propertyCard
-      )
-    } catch (e) {}
+        let [lbed, lsqf, lacres] = rooms
+        var bed = lbed
+        var sqf = lsqf.replaceAll(',', '')
 
-    try {
-      buildingType = await paginationPage.evaluate(
-        (el) =>
-          el.querySelector(
-            'div.flex.gap-x-5 > div.leading-tight.text-sm.font-medium'
-          ).textContent,
-        propertyCard
-      )
-    } catch (e) {}
+        var bath = await paginationPage.evaluate(
+          (el) =>
+            el.querySelector(
+              'div.flex.items-baseline > span > span.font-semibold'
+            ).textContent,
+          propertyCard
+        )
+      } catch (e) {}
 
-    let detailObj = {
-      Url: url,
-      'Number of Bedrooms': bed,
-      'Number of Bathrooms': bath,
-      'Square Feet': sqf,
-      'Rental Price': price,
+      try {
+        buildingType = await paginationPage.evaluate(
+          (el) =>
+            el.querySelector(
+              'div.flex.gap-x-5 > div.leading-tight.text-sm.font-medium'
+            ).textContent,
+          propertyCard
+        )
+      } catch (e) {}
+
+      let detailObj = {
+        Url: url,
+        'Number of Bedrooms': bed,
+        'Number of Bathrooms': bath,
+        'Square Feet': sqf,
+        'Rental Price': price,
+      }
+      await detail(url, detailObj, i + 1, page)
     }
-    await detail(url, detailObj, i + 1, page)
   }
   console.log('Complete Scrapping Page: ' + targetUrl)
   await paginationPage.close()
