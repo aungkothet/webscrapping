@@ -145,6 +145,8 @@ const getData = async (targetUrl, page = 0) => {
         'Rental Price': price,
       }
       await detail(url, detailObj, i + 1, page)
+    } else {
+      console.log(`scrapping skipped ${page} >> ${i + 1}.... ${targetUrl}`)
     }
   }
   console.log('Complete Scrapping Page: ' + targetUrl)

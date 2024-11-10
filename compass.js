@@ -98,7 +98,7 @@ const getDataPerPaginationPage = async (targetUrl, page) => {
       }, propertyCard)
 
       const parts = addressData.url.split('/')
-      const id = parts[parts.length - 1]
+      const id = parts[parts.length - 2]
       var alreadyScrapped = checkAlreadyScrapped(id, site)
       if (!alreadyScrapped) {
         let detailObj = {
@@ -110,6 +110,8 @@ const getDataPerPaginationPage = async (targetUrl, page) => {
           'Zip Code': addressData.address.postalCode,
         }
         await detail(addressData.url, detailObj, i + 1, page)
+      } else {
+        console.log(`scrapping skipped ${page} >> ${i + 1}.... ${targetUrl}`)
       }
     }
   }
@@ -497,15 +499,23 @@ const detail = async (targetUrl, pObj, index = 0, page = 1) => {
   writeToFile(folderName, pObj)
 }
 
-const counties = ['jefferson', 'dutchess', 'oswego', 'oneida', 'ulster']
-
+const counties = [
+  'bexar-county-tx',
+  'mclennan-county-tx',
+  'cooke-county-tx',
+  'fannin-county-tx',
+  'grayson-county-tx',
+  'georgia',
+  'tennessee',
+  'new-york',
+]
 const scrap = async (county, index) => {
   if (index != 0) {
     folderName = replaceLastPart(folderName, county)
   } else {
     folderName += `/${county}`
   }
-  rootUrl = `https://www.compass.com/for-rent/${county}-county-ny/status=coming-soon,active,rented/rented-date.max=1years/`
+  rootUrl = `https://www.compass.com/for-rent/${county}/status=coming-soon,active,rented/rented-date.max=1years/`
   targetUrl = rootUrl
   console.log(`Scrapping Start : ${county} : ${new Date().toISOString()}`)
   await init()

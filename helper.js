@@ -15,17 +15,29 @@ export function closeJsonFile(folderName) {
   if (fileContent.endsWith(',\n')) {
     fileContent = fileContent.slice(0, -2)
     fs.writeFileSync(jsonFileName, fileContent + '\n]')
+  } else {
+    let a = fileContent.slice(0, -2)
+    if (a.length == 0) {
+      fs.writeFileSync(jsonFileName, fileContent + ']')
+    }
   }
 }
 
 export function checkAlreadyScrapped(id, site) {
-  let fileContent = fs.readFileSync(`finished/${site}-ids.json`, 'utf-8')
+  const fileName = `finished/${site}-ids.json`
+  if (!fs.existsSync('finished')) {
+    fs.mkdirSync('finished', { recursive: true }, (err) => {})
+  }
+  if (!fs.existsSync(fileName)) {
+    fs.writeFileSync(fileName, '[]')
+  }
+  let fileContent = fs.readFileSync(fileName, 'utf-8')
   let ary = JSON.parse(fileContent)
   if (ary.includes(id)) {
     return true
   } else {
     ary.push(id)
-    fs.writeFileSync(`finished/${site}-ids.json`, JSON.stringify(ary))
+    fs.writeFileSync(fileName, JSON.stringify(ary))
     return false
   }
 }
@@ -54,7 +66,7 @@ export function writeToFile(folderName, obj = null, start = false) {
 
 export function generateExport(folderName) {
   const fileName = folderName.replaceAll('/', '-')
-  const exportDir = 'output/export'
+  const exportDir = `output/export/${folderName}`
   var jsonFileName = `output/jsons/${folderName}/${fileName}.json`
   const csvFileName = `${exportDir}/${fileName}.csv`
   try {
@@ -69,14 +81,18 @@ export function generateExport(folderName) {
       console.error(err)
       return
     }
-    const csvData = csvjson.toCSV(fileContent, { headers: 'key' })
-    fs.writeFile(csvFileName, csvData, 'utf-8', (err) => {
-      if (err) {
-        console.error(err)
-        return
-      }
-      console.log(`Final CSV file created at : ${csvFileName}`)
-    })
+    if (fileContent.length > 3) {
+      const csvData = csvjson.toCSV(fileContent, { headers: 'key' })
+      fs.writeFile(csvFileName, csvData, 'utf-8', (err) => {
+        if (err) {
+          console.error(err)
+          return
+        }
+        console.log(`Final CSV file created at : ${csvFileName}`)
+      })
+    } else {
+      console.log(`Skipped for Empty CSV Data`)
+    }
   })
 }
 
