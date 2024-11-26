@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "node compass.js && node onekeymls.js"
+    "dev": "node compass.js && node onekeymls.js && node appartments.js false"
   },
   "keywords": [],
   "author": "",

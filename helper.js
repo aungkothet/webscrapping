@@ -1,9 +1,9 @@
 import fs from 'fs'
 import csvjson from 'csvjson'
 
-export function replaceLastPart(string, replacement) {
+export function replaceLastPart(string, replacement, place = 1) {
   const parts = string.split('/')
-  parts[parts.length - 1] = replacement
+  parts[parts.length - place] = replacement
   const newString = parts.join('/')
   return newString
 }
