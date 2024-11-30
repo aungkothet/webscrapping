@@ -80,10 +80,10 @@ const getDataPerPaginationPage = async (targetUrl, page) => {
   var addressData
   var paginationPage = await browser.newPage()
   await paginationPage.goto(targetUrl, {
-    waitUntil: 'networkidle0',
+    waitUntil: 'domcontentloaded',
     timeout: 0,
   })
-  const propertyCards = await paginationPage.$$('div.placardContainer>ul>li')
+  const propertyCards = await paginationPage.$$('div.placardContainer>ul>li.mortar-wrapper')
   console.log('Total Property in this page: ' + propertyCards.length)
 
   for (const [i, propertyCard] of propertyCards.entries()) {
@@ -92,6 +92,7 @@ const getDataPerPaginationPage = async (targetUrl, page) => {
       propertyCard
     )
     if (dataUrl) {
+      console.log(dataUrl)
       const parts = dataUrl.split('/')
       const id = parts[parts.length - 2]
       var alreadyScrapped = checkAlreadyScrapped(id, site)
@@ -100,6 +101,7 @@ const getDataPerPaginationPage = async (targetUrl, page) => {
           Url: dataUrl,
           County: county,
         }
+
         await detail(dataUrl, detailObj, i + 1, page)
       } else {
         console.log(`scrapping skipped ${page} >> ${i + 1}.... ${targetUrl}`)
@@ -114,32 +116,48 @@ const detail = async (targetUrl, pObj, index = 0, page = 1) => {
   console.log(`scrapping ${page} >> ${index}.... ${targetUrl}`)
   var detailPage = await browser.newPage()
   await detailPage.goto(targetUrl, {
-    waitUntil: 'networkidle0',
+    waitUntil: 'domcontentloaded',
     timeout: 0,
   })
+  try {
+    let state = await detailPage.evaluate(() => {
+      const span = document.querySelector(
+        '#breadcrumbs-container>span:nth-child(2)'
+      )
+      return span.textContent
+    })
+    pObj['State'] = state.replaceAll('\t', '').replaceAll('\n', '')
+  } catch (e) {
+    pObj['State']=null
+    console.log(e)
+  }
 
-  let state = await detailPage.evaluate(() => {
-    const span = document.querySelector(
-      '#breadcrumbs-container>span:nth-child(2)'
-    )
-    return span.textContent
-  })
-  pObj['State'] = state
+  try {
+    let city = await detailPage.evaluate(() => {
+      const span = document.querySelector(
+        '#breadcrumbs-container>span:nth-child(4)'
+      )
+      return span.textContent
+    })
+    pObj['City'] = city
+  } catch (e) {
+    console.log(e)
+    pObj['City'] = null
+  }
 
-  let city = await detailPage.evaluate(() => {
-    const span = document.querySelector(
-      '#breadcrumbs-container>span:nth-child(4)'
-    )
-    return span.textContent
-  })
-  pObj['City'] = city
-  let street = await detailPage.evaluate(() => {
-    const span = document.querySelector(
-      '#breadcrumbs-container>span:last-child'
-    )
-    return span.textContent
-  })
-  pObj['Street'] = street
+  try {
+    let street = await detailPage.evaluate(() => {
+      const span = document.querySelector(
+        '#breadcrumbs-container>span:last-child'
+      )
+      return span.textContent
+    })
+    pObj['Street'] = street
+  } catch (e) {
+    console.log(e)
+    pObj['Street'] = null
+  }
+
 
   let zipcode = await detailPage.evaluate(() => {
     const span = document.querySelector(
@@ -205,7 +223,7 @@ const detail = async (targetUrl, pObj, index = 0, page = 1) => {
         specInfo
       )
       specInfos.push(key)
-    } catch (e) {}
+    } catch (e) { }
   }
   var internetIncl = null,
     refrigeratorIncl = null,
