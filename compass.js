@@ -111,7 +111,7 @@ const getDataPerPaginationPage = async (targetUrl, page) => {
         }
         await detail(addressData.url, detailObj, i + 1, page)
       } else {
-        console.log(`scrapping skipped ${page} >> ${i + 1}.... ${targetUrl}`)
+        console.log(`scrapping skipped ${page} >> ${i + 1}.... ${addressData.url}`)
       }
     }
   }
@@ -508,7 +508,11 @@ const counties = [
   'georgia',
   'tennessee',
   'new-york',
+  'utica-ny',
+  'erie-county-ny',
 ]
+
+
 const scrap = async (county, index) => {
   if (index != 0) {
     folderName = replaceLastPart(folderName, county)
@@ -523,9 +527,28 @@ const scrap = async (county, index) => {
   console.log('-------')
 }
 
+const additionals = [
+'https://www.compass.com/for-rent/houston-tx/status=coming-soon,active,rented/rented-date.max=1years/mapview=30.155908000054183,-95.01641699964478,29.516282000414037,-95.90974300033918/',
+'https://www.compass.com/for-rent/_map/mapview=35.4796612,-109.3742438,32.4506565,-113.4611578/shape-ids=KHhtrXjrqz/status=coming-soon,active,rented/rented-date.max=1years/',
+'https://www.compass.com/for-rent/_map/mapview=41.7951267,-95.2020962,40.4189919,-97.2455532/shape-ids=XCVfk31RJab/status=coming-soon,active,rented/rented-date.max=1years/',
+'https://www.compass.com/for-rent/_map/mapview=32.4740337,-83.6879302,31.2024129,-85.2919342/shape-ids=7hP1q0RyBee/status=coming-soon,active,rented/rented-date.max=1years/',
+'https://www.compass.com/for-rent/_map/mapview=41.8998414,-90.1530182,41.3403367,-90.9550202/shape-ids=VDV7P8SenEd/status=coming-soon,active,rented/rented-date.max=1years/'
+];
+const scrapAdditionals = async (url,index) => {
+  targetUrl = url
+  folderName = replaceLastPart(folderName, index)
+  console.log(`Scrapping Start : ${url} : ${new Date().toISOString()}`)
+  await init()
+  console.log(`Scrapping End : ${url} : ${new Date().toISOString()}`)
+  console.log('-------')
+}
+
 async function processCounties(array) {
   for (const [index, item] of array.entries()) {
     await scrap(item, index)
+  }
+  for (const [index, item] of additionals.entries()) {
+    await scrapAdditionals(item, index)
   }
 }
 processCounties(counties)

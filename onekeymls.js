@@ -41,7 +41,7 @@ const init = async () => {
   })
   page = await browser.newPage()
   await page.goto(rootUrl, {
-    waitUntil: 'domcontentloaded',
+    waitUntil: 'networkidle0',
     timeout: 0,
   })
   const paginationLinks = await page.$$(
@@ -82,6 +82,7 @@ const getData = async (targetUrl, page = 0) => {
     waitUntil: 'networkidle0',
     timeout: 0,
   })
+  await paginationPage.waitForFunction(() => !document.querySelector('div.animate-spin'));
   const propertySearchCards = await paginationPage.$$('.property-search-card')
   console.log('Scrapping Page: ' + targetUrl)
   console.log('Total Property in this page: ' + propertySearchCards.length)
@@ -146,7 +147,7 @@ const getData = async (targetUrl, page = 0) => {
       }
       await detail(url, detailObj, i + 1, page)
     } else {
-      console.log(`scrapping skipped ${page} >> ${i + 1}.... ${targetUrl}`)
+      console.log(`scrapping skipped ${page} >> ${i + 1}.... ${url}`)
     }
   }
   console.log('Complete Scrapping Page: ' + targetUrl)
